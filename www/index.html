@@ -61,7 +61,8 @@
              // load to points
              store.load({
                  params: {
-                     startpoint: startpoint.x + " " + startpoint.y,
+                     lon: startpoint.x,
+                     lat: startpoint.y,
                  }
              });
          }
@@ -131,7 +132,7 @@
             layer: isodistance_layer,
             proxy: new GeoExt.data.ProtocolProxy({
                 protocol: new OpenLayers.Protocol.HTTP({
-                    url: "http://joshdoe.com/cgi-bin/walk.py",
+                    url: "../cgi-bin/isochrone.py",
                     format: new OpenLayers.Format.GeoJSON({
                         internalProjection: epsg_900913,
                         externalProjection: epsg_4326

@@ -45,6 +45,7 @@ EPSILON = 1.e-27
 
 
 class ContourError(Exception):
+    """Used for all exceptions created by this module."""
     def __init__(self, message):
         self._message = message
 
@@ -53,14 +54,13 @@ class ContourError(Exception):
 
 
 class Contours():
-    def __init__(self, dataSrcName, fieldName, layerName=None, sql=None):
+    """This class allows the creation of contour lines and/or filled contour
+    polygons from irregular point data
+    """
+    def __init__(self):
         self._data = None
         self._gridData = None
         self._levels = None
-
-        self.getDataFromOGR(dataSrcName, fieldName=fieldName,
-                            layerName=layerName, sql=sql)
-        self.computeGrid()
 
     def getLevels(self):
         return self._levels
@@ -262,6 +262,8 @@ class Contours():
         ds = None
 
 if __name__ == "__main__":
+    # Testing Contours using points.shp with 'cost' attribute
     c = Contours(dataSrcName='points.shp', fieldName='cost')
-    c.setLevels(0.4, 1.6, 4)
+    c.setLevels(0.0, 2.0, 5)
+    # Create filled contour layer and write to stdout as GeoJSON
     c.createFilledContourLayer(driverName="GeoJSON")

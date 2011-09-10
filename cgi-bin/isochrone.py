@@ -6,17 +6,18 @@ import cgi
 import cgitb
 cgitb.enable()
 
-# set HOME env var to a directory the httpd server can write to
+# set HOME env var to a directory the httpd server can write to (matplotlib)
 os.environ['HOME'] = '/tmp/'
 
 from contour import Contours, ContourError
 
 form = cgi.FieldStorage()
-if "startpoint" not in form:
+if "lon" not in form or "lat" not in form:
     print "Content-Type: text/plain\n"
-    print "Error, no startpoint specified"
+    print "Error, no lon/lat specified"
 
-pt = form["startpoint"].value
+# TODO: should make sure float values were passed
+pt =  form["lon"].value + " " + form["lat"].value
 sql = """SELECT *
           FROM vertices_tmp
           JOIN
@@ -34,13 +35,15 @@ sql = """SELECT *
           ON
           vertices_tmp.id = route.vertex_id;"""
 
-#c = Contours(dataSrcName='points.shp', fieldName='cost')
-c = Contours(dataSrcName='PG: host=localhost dbname=virginia '
-                         'user=postgres password=postgres',
-             fieldName='cost', sql=sql)
+c = Contours()
+c.getDataFromOGR(dataSrcName='PG: host=localhost dbname=virginia '
+                             'user=postgres password=postgres',
+                 fieldName='cost', sql=sql)
+c.computeGrid()
 c.setLevels(0.0, 1.6, 5)
 
 try:
+    # on one system had trouble letting OGR print to stdout, so do so manually
     tempname = '/tmp/walk.json'
     if os.path.exists(tempname):
         os.remove(tempname)
