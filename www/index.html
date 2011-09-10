@@ -1,0 +1,149 @@
+<html>
+<head>
+
+<title>A Basic GeoExt Page</title>
+<script src="ext/adapter/ext/ext-base.js" type="text/javascript"></script>
+<script src="ext/ext-all.js"  type="text/javascript"></script>
+<link rel="stylesheet" type="text/css" href="ext/resources/css/ext-all.css" />
+<script src="OpenLayers/OpenLayers.js" type="text/javascript"></script>
+<script src="GeoExt/script/GeoExt.js" type="text/javascript"></script>
+<link rel="stylesheet" type="text/css"
+      href="GeoExt/resources/css/geoext-all.css" />
+
+<script src="DrawPoints.js" type="text/javascript"></script>
+
+<script src="proj4js/lib/proj4js.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+     OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
+         defaultHandlerOptions: {
+             'single': true,
+             'double': false,
+             'pixelTolerance': 0,
+             'stopSingle': false,
+             'stopDouble': false
+         },
+
+         initialize: function(options) {
+             this.handlerOptions = OpenLayers.Util.extend(
+                 {}, this.defaultHandlerOptions
+             );
+             OpenLayers.Control.prototype.initialize.apply(
+                 this, arguments
+             ); 
+             this.handler = new OpenLayers.Handler.Click(
+                 this, {
+                     'click': this.trigger
+                 }, this.handlerOptions
+             );
+         }, 
+
+         trigger: function(e) {
+             var lonlat = map.getLonLatFromViewPortPx(e.xy);
+             alert("You clicked near " + lonlat.lat + " N, " +
+                                       + lonlat.lon + " E");
+         }
+
+     });
+     // global projection objects (uses the proj4js lib)
+     var epsg_4326 = new OpenLayers.Projection("EPSG:4326"),
+         epsg_900913 = new OpenLayers.Projection("EPSG:900913");
+
+     function isodistance(store, layer) {
+         if (layer.features.length == 1) {
+             // erase the previous points
+             store.removeAll();
+
+             // transform the geometry from EPSG:900913 to EPSG:4326
+             var startpoint = layer.features[0].geometry.clone();
+             startpoint.transform(epsg_900913, epsg_4326);
+
+             // load to points
+             store.load({
+                 params: {
+                     startpoint: startpoint.x + " " + startpoint.y,
+                 }
+             });
+         }
+    }
+
+    Ext.onReady(function() {
+        // create the map panel
+        var panel = new GeoExt.MapPanel({
+            renderTo: "gxmap",
+            map: {
+                layers: [new OpenLayers.Layer.OSM("Simple OSM Map")]
+            },
+            center: [-8603772.12, 4697635.50],
+            zoom: 14,
+            title: "A Simple GeoExt Map",
+        });
+        var map = panel.map;
+
+        // create isodistance style
+        var styleMap = new OpenLayers.StyleMap(
+          {fillColor: "#ff0000",
+           fillOpacity: 0.7});
+        var lookup = {
+          "0.0": {fillColor: "#0000ff"},
+          "0.4": {fillColor: "#4040ff"},
+          "0.8": {fillColor: "#8080ff"},
+          "1.2": {fillColor: "#c0c0ff"}
+          }
+        styleMap.addUniqueValueRules("default", "level_min", lookup);
+
+        // create the layer where the cost points will be drawn
+        var isodistance_layer = new OpenLayers.Layer.Vector("isodistance", {
+            styleMap: styleMap
+        });
+
+        // create the layer where the start point will be drawn
+        var points_layer = new OpenLayers.Layer.Vector("points");
+
+        // when a new point is added to the layer, call the pgrouting function
+        points_layer.events.on({
+            featureadded: function() {
+                isodistance(store, points_layer);
+            }
+        });
+
+        // add the layers to the map
+        map.addLayers([points_layer, isodistance_layer]);
+
+        // create the control to draw the points (see the DrawPoints.js file)
+        var draw_points = new DrawPoints(points_layer);
+
+        // create the control to move the points
+        var drag_points = new OpenLayers.Control.DragFeature(points_layer, {
+            autoActivate: true
+        });
+
+        // when a point is moved, call the pgrouting function
+        drag_points.onComplete = function() {
+              isodistance(store, points_layer);
+        };
+
+        // add the controls to the map
+        map.addControls([draw_points, drag_points]);
+
+        // create the store to query the web service
+        var store = new GeoExt.data.FeatureStore({
+            layer: isodistance_layer,
+            proxy: new GeoExt.data.ProtocolProxy({
+                protocol: new OpenLayers.Protocol.HTTP({
+                    url: "http://joshdoe.com/cgi-bin/walk.py",
+                    format: new OpenLayers.Format.GeoJSON({
+                        internalProjection: epsg_900913,
+                        externalProjection: epsg_4326
+                    })
+                })
+            })
+        });
+    });
+</script>
+</head>
+<body>
+<div id="gxmap"></div>
+<div id="method"></div>
+</body>
+</html>
