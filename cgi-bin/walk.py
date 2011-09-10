@@ -9,7 +9,7 @@ cgitb.enable()
 # set HOME env var to a directory the httpd server can write to
 os.environ['HOME'] = '/tmp/'
 
-from contour import Contours,ContourError
+from contour import Contours, ContourError
 
 form = cgi.FieldStorage()
 if "startpoint" not in form:
@@ -27,16 +27,17 @@ sql = """SELECT *
                  length::float8 AS cost
              FROM ways',
              (SELECT id FROM vertices_tmp ORDER BY distance(the_geom,
-             ST_GeomFromText('POINT("""+pt+""")',4326)) LIMIT 1),
+             ST_GeomFromText('POINT(""" + pt + """)',4326)) LIMIT 1),
              3,
              false,
              false)) AS route
           ON
-          vertices_tmp.id = route.vertex_id;""";
+          vertices_tmp.id = route.vertex_id;"""
 
 #c = Contours(dataSrcName='points.shp', fieldName='cost')
 c = Contours(dataSrcName='PG: host=localhost dbname=virginia '
-                         'user=postgres password=postgres', fieldName='cost', sql=sql)
+                         'user=postgres password=postgres',
+             fieldName='cost', sql=sql)
 c.setLevels(0.0, 1.6, 5)
 
 try:
@@ -48,4 +49,4 @@ try:
     print "Content-Type: application/json\n"
     print json.read()
 except ContourError as detail:
-    print "Content-Type: text/plain\n",detail
+    print "Content-Type: text/plain\n", detail
